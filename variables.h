@@ -27,7 +27,10 @@ unsigned long setting[settings_count];
 
 //touch kintamieji
 byte touchedKeyVal;
-boolean keyDown;
+byte touchDelay = 100;
+unsigned long button1PressBegin, button2PressBegin, button3PressBegin, button4PressBegin;
+boolean button1Pressed, button2Pressed, button3Pressed, button4Pressed;
+
 
 // pagalbiniai kintamieji
 unsigned long bms_retrieve_time, controller_retrieve_time, screen_refresh_time, motor_graph_time;

@@ -7,12 +7,10 @@
 #include <openGLCD.h>
 #include <EEPROM.h>
 #include <Wire.h>
-#include <AtTouch.h>
 #include "RTClib.h"
 #include <ModbusMaster.h>
 #include "variables.h"
 
-AtTouch touch;
 RTC_DS3231 rtc;
 #ifndef mock_data
   ModbusMaster bms;
@@ -22,7 +20,10 @@ RTC_DS3231 rtc;
 #define bms_retrieve_interval 100 //bus 100-200 intervale
 #define controller_retrieve_interval 1000 //bus turbut 1000
 #define screen_refresh_interval 2000 
-#define touchInterruptPin PB4
+//#define button1Pin PA11
+//#define button2Pin PA12
+//#define button3Pin PA15
+#define button4Pin PB3
 #define backlight_pin PA8
 
 void setup()
@@ -31,7 +32,10 @@ void setup()
   Serial.println("Programa pradeda darba");//delay(5000);
   GLCD.Init();
   rtc.begin();
-  touch.begin(touchInterruptPin);
+//  pinMode(button1Pin, INPUT_PULLUP);
+//  pinMode(button2Pin, INPUT_PULLUP);
+//  pinMode(button3Pin, INPUT_PULLUP);
+  pinMode(button4Pin, INPUT_PULLUP);
   #ifndef mock_data
     bms.begin(170, STM32_USART1, 115200);
   //  controller.begin(15, Serial3, 115200);
@@ -416,14 +420,14 @@ void DrawInfoBlock(int row, int col, char* title) {
 void DrawIndexPage() {
   //piesime pagrindini langa
 
-  Serial.println("DrawIndexPage. Round #1");
+//  Serial.println("DrawIndexPage. Round #1");
   //baterija begin
-    Serial.println("DrawIndexPage. Round #1.1");  
+//    Serial.println("DrawIndexPage. Round #1.1");  
     //baterijos grafinis simbolis
     GLCD.DrawVBarGraph( 9, 52, 7, -41, 1, 0, 100, (int)soc/1000000);
     GLCD.DrawHLine( 11, 11, 3, PIXEL_ON);
 
-    Serial.println("DrawIndexPage. Round #1.2");
+//    Serial.println("DrawIndexPage. Round #1.2");
     //itampa
     GLCD.SelectFont(System5x7);
     dtostrf(battery_voltage, 2, 0, desimtainis);
@@ -479,7 +483,7 @@ void DrawIndexPage() {
     GLCD.print(" km");
   //vidurine dalis end
 
-Serial.println("DrawIndexPage. Round #2");
+//Serial.println("DrawIndexPage. Round #2");
   //desine dalis begin - srove ir temperatura
     //piesiame trapecija sroves grafiniam atvaizdavimui
       int graph_top = 11;
@@ -812,56 +816,91 @@ void SetSingleSetting(int index, int val) {
 
 
 void ReadTouchButtons() {
-  if(touch.hold() == true) //press and hold
-  {
-    keyDown = true;
-    touchedKeyVal = touch.getKey();
+  touchedKeyVal = 0;
+  
+//  if(digitalRead(button1Pin) == LOW) {
+//    button1Pressed = true;
+//    button1PressBegin = button1Pressed ? button1PressBegin : millis();
+//  }
+//  else {
+//    button1Pressed = false;
+//  }
+//  
+//  if(digitalRead(button2Pin) == LOW) {
+//    button2Pressed = true;
+//    button2PressBegin = button2Pressed ? button2PressBegin : millis();
+//  }
+//  else {
+//    button2Pressed = false;
+//  }
+//  
+//  if(digitalRead(button3Pin) == LOW) {
+//    button3Pressed = true;
+//    button3PressBegin = button3Pressed ? button3PressBegin : millis();
+//  }
+//  else {
+//    button3Pressed = false;
+//  }
+    Serial.print("Button4 level is ");
+    if(digitalRead(button4Pin) == HIGH)
+      Serial.println("HIGHT");
+    else
+      Serial.println("LOW");
+  if(digitalRead(button4Pin) == LOW) {
+    button4PressBegin = button4Pressed ? button4PressBegin : millis();
+    button4Pressed = true;
+  }
+  else {
+    button4Pressed = false;
+  }
+  
+//  if(button1Pressed && button1PressBegin - millis() > touchDelay) { //click
+//    touchedKeyVal = 1;
+//  }
+//  if(button2Pressed && button2PressBegin - millis() > touchDelay) { //click
+//    touchedKeyVal = 2;
+//  }
+//  if(button3Pressed && button3PressBegin - millis() > touchDelay) { //click
+//    touchedKeyVal = 3;
+//  }
+  if(button4Pressed && button4PressBegin - millis() > touchDelay) { //click
+//    touchedKeyVal = 3;
   }
 
-  if(touch.hit() == true) //just press once
-  { 
-    keyDown = true;
-    touchedKeyVal = touch.readActiveKey(); //read which key was hit
-  } 
-
-
-  if(keyDown) {
-    if(touchedKeyVal > 0) {
-        Serial.print("button #");
-        Serial.print(touchedKeyVal);  
-        Serial.println(" Down");
-        switch(touchedKeyVal) {
-          case 1:
-            if(active_settings_block == 0) {
-              go_home_screen = true;
-            }
-            else {
-              if(active_screen == 5)
-                SaveSettings();
-            }
-            active_settings_block = 0;
-            break;
-          case 2:
-            if(active_screen == 5 && active_settings_block > 0) //nustatymu lange iskart nepabega i pagrindini
-              decrease_value = true;
-            else
-              go_last_screen = true;
-            break;
-          case 3:
-            if(active_screen == 5 && active_settings_block > 0) //nustatymu lange iskart nepabega i pagrindini
-              increase_value = true;
-            else
-              go_next_screen = true;
-            break;
-          case 4:
-            active_settings_block++;
-            if(active_settings_block > active_settings_block_limit)
-              active_settings_block = 1;
-            break;
-        }
-    }   
-    keyDown = false;
-  }
+  if(touchedKeyVal > 0) {
+      Serial.print("button #");
+      Serial.print(touchedKeyVal);  
+      Serial.println(" Down");
+      switch(touchedKeyVal) {
+        case 1:
+          if(active_settings_block == 0) {
+            go_home_screen = true;
+          }
+          else {
+            if(active_screen == 5)
+              SaveSettings();
+          }
+          active_settings_block = 0;
+          break;
+        case 2:
+          if(active_screen == 5 && active_settings_block > 0) //nustatymu lange iskart nepabega i pagrindini
+            decrease_value = true;
+          else
+            go_last_screen = true;
+          break;
+        case 3:
+          if(active_screen == 5 && active_settings_block > 0) //nustatymu lange iskart nepabega i pagrindini
+            increase_value = true;
+          else
+            go_next_screen = true;
+          break;
+        case 4:
+          active_settings_block++;
+          if(active_settings_block > active_settings_block_limit)
+            active_settings_block = 1;
+          break;
+      }
+  }   
   
 }
 
@@ -881,12 +920,13 @@ void loop()
 //  GetControllerData();
   DrawScreen();
   
-//ReadTouchButtons();
+  ReadTouchButtons();
 
 //  GLCD.CursorToXY(0, 0);//GLCD.CenterX-width, GLCD.CenterY-height);
 
 
 //  GLCD.print(millis()/1000);
 //Serial.println(millis()/1000);
+delay(20);
 }
 
