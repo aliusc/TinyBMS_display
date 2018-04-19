@@ -1,0 +1,339 @@
+/*
+ * Pirmas etapas:
+ * užklausinėkime BMS naujausių duomenų, bei tai atvaizduokime.
+ */
+
+#include <openGLCD.h>
+#include <EEPROM.h>
+#define bms_retrieve_interval 2000 //bus 100-200 intervale
+
+// is BMS gaunami duomenys
+uint16 cell[19]; //celes 1-16, minV, maxV, deltaV
+float battery_voltage, battery_current, speed;
+uint32 uptime, time_left, soc;
+uint16 distance_left;
+int16 temp_onboard, temp_ext_1, temp_ext_2, battery_status;
+
+// apskaiciuojami kintamieji
+float trip_km, trip_w, trip_w_km, trip_max_w, trip_max_a, trip_min_v;
+
+// ekrano kintamieji
+byte active_screen;
+int c_w; //char_width
+char desimtainis[15];
+#define graph_height  41
+int current_graph_x_begin[graph_height] = {97,97,   98,98,98,98,     99,99,99,99,99,99,       100,100,100,100, 101,101,101,101,101, 102,102,102,102,102, 103,103,103,103,103, 104,104,104,104, 105,105,105,105,105, 106};
+int current_graph_x_end[graph_height] =   {124,124, 123,123,123,123, 122,122,122,122,122,122, 121,121,121,121, 120,120,120,120,120, 119,119,119,119,119, 118,118,118,118,118, 117,117,117,117, 116,116,116,116,116, 115};
+
+// pagalbiniai kintamieji
+unsigned long bms_retrieve_time;
+
+void setup()
+{
+  Serial.begin(9600);
+  
+  GLCD.Init();
+
+  //GLCD.SelectFont(lato_60);//lcdnums_60);
+  LoadSettings();
+}
+
+void DrawScreen() {
+  switch(active_screen) {
+    case 0:
+      DrawIndexPage();
+      break;
+    case 1:
+      DrawInfoPage(1);
+      break;
+    case 3:
+      DrawBatPage();
+      break;
+    default:
+      break;
+  }
+}
+
+void DrawBatPage() {
+  //siame puslapyje bus celiu grafikas
+  DrawInnerPageTitle("Battery", "3/3");
+  
+  //celiu delta dalis, kuri bus grafiko min/max reziai
+  for(int c=0;c<16;c++) {
+    GLCD.DrawVBarGraph( 24 + 5*c, 50, 3, -41, 0, cell[16]-200, cell[17]+200, cell[c]);
+  }
+  GLCD.SelectFont(Wendy3x5);
+  GLCD.CursorToXY(2, 10);
+  dtostrf(cell[17]/10000.0, 5, 3, desimtainis);
+  GLCD.print(desimtainis);
+
+  
+  for(int c=24;c<102;c++) {
+    GLCD.SetDot(23, 48, PIXEL_ON);
+  }
+  
+  GLCD.CursorToXY(2, 29);
+  dtostrf(cell[18]/10000.0, 5, 3, desimtainis);
+  GLCD.print(desimtainis);
+  GLCD.CursorToXY(2, 48);
+  dtostrf(cell[16]/10000.0, 5, 3, desimtainis);
+  GLCD.print(desimtainis);
+  
+
+  //baterijos grafinis simbolis desineje
+  GLCD.DrawVBarGraph( 110, 52, 8, -41, 1, 0, 100, (int)soc/100000);
+  GLCD.DrawRect( 112, 10, 4, 3, PIXEL_ON);
+}
+
+void DrawInfoPage(int page_num) {
+  char* title = "TRIP";
+  char* num_of_num = "1/1";
+  if(page_num == 1) {
+    
+  }
+  DrawInnerPageTitle(title, num_of_num);
+
+  DrawInfoBlock(1,1, "Na11", "Val11");
+  DrawInfoBlock(1,2, "Na12", "Val12");
+  DrawInfoBlock(1,3, "Na13", "Val13");
+  DrawInfoBlock(2,1, "Na11", "Val21");
+  DrawInfoBlock(2,2, "Na12", "Val22");
+  DrawInfoBlock(2,3, "Na13", "Val23");
+  DrawInfoBlock(3,1, "Na31", "Val31");
+  DrawInfoBlock(3,2, "Na32", "Val32");
+  DrawInfoBlock(3,3, "Na33", "Val33");
+}
+
+void DrawInnerPageTitle(char* title, char* num_of_num) {
+  //pavadinimas
+  GLCD.SelectFont(System5x7);
+  GLCD.CursorToXY(4, 0);
+  GLCD.print(title);
+
+  //laikrodis arba pranesimas
+  char* clock_text = GetMessageBlock();
+  c_w = (int)(GLCD.StringWidth(clock_text)/2);
+  GLCD.CursorToXY(73-c_w, 0);
+  GLCD.print(clock_text);
+
+  //puslapiavimo informacija
+  c_w = GLCD.StringWidth(num_of_num);
+  GLCD.CursorToXY(126-c_w, 0);
+  GLCD.print(num_of_num);
+}
+void DrawInfoBlock(int col, int row, char* title, char* val) {
+  int left = 43*(col-1);
+  int top = 8 + 19*(row-1);
+  GLCD.DrawRect(left, top, 41, 18, PIXEL_ON);
+  GLCD.FillRect(left, top, 41, 8, PIXEL_ON);
+  GLCD.SelectFont(Iain5x7, PIXEL_OFF);
+  GLCD.CursorToXY(left+3, top);
+  GLCD.print(title);
+  GLCD.SelectFont(Iain5x7);
+  c_w = GLCD.StringWidth(val);
+  GLCD.CursorToXY(left+38-c_w, top+9);
+  GLCD.print(val);
+}
+
+void DrawIndexPage() {
+  //piesime pagrindini langa
+
+  //baterija begin
+    //baterijos grafinis simbolis
+    GLCD.DrawVBarGraph( 9, 52, 7, -41, 1, 0, 100, (int)soc/100000);
+    GLCD.DrawHLine( 11, 11, 3, PIXEL_ON);
+    
+    //itampa
+    GLCD.SelectFont(System5x7);
+    dtostrf(battery_voltage, 2, 0, desimtainis);
+    c_w = (int)GLCD.StringWidth(desimtainis)/2;
+    GLCD.CursorToXY(10-c_w, 2);
+    GLCD.print(desimtainis);
+    GLCD.SelectFont(Wendy3x5);
+    dtostrf((battery_voltage-(int)battery_voltage)*10, 1, 0, desimtainis);
+    GLCD.CursorToXY(11+c_w-1, 4);
+    GLCD.print(desimtainis);
+    GLCD.CursorToXY(20, 4);
+    GLCD.print("v");
+    
+    //galimas kilometrazas
+    dtostrf(battery_voltage, 3, 0, desimtainis);
+    GLCD.SelectFont(Iain5x7);
+    c_w = (int)GLCD.StringWidth(desimtainis)/2;
+    GLCD.CursorToXY(10-c_w, 55);
+    GLCD.print(distance_left);
+    GLCD.SelectFont(Wendy3x5);
+    GLCD.CursorToXY(19, 57);
+    GLCD.print("km");
+  //baterija end
+
+  //vidurine dalis begin - laikrodis, greitis, trip_km
+    //zinuciu-laikrodzio atvaizdavimas
+    char* clock_text = GetMessageBlock();
+    GLCD.SelectFont(System5x7);
+    c_w = (int)(GLCD.StringWidth(clock_text)/2);
+    GLCD.CursorToXY(64-c_w, 2);
+    GLCD.print(clock_text);
+
+    //greicio atvaizdavimas
+    dtostrf(speed, 2, 0, desimtainis);
+    GLCD.SelectFont(lato_50);
+    c_w = (int)GLCD.StringWidth(desimtainis)/2;
+    GLCD.CursorToXY(64-c_w, 16);
+    GLCD.print(desimtainis);
+//    GLCD.SelectFont(Wendy3x5);
+//    GLCD.CursorToXY(19, 57);
+//    GLCD.print("km");
+
+    //TRIP atstumo atvaizdavimas
+    dtostrf((int)(trip_km*10)/10.0, 5, 1, desimtainis); //palikime tik viena skaiciu po kablelio, nes kitaip apvalina ir buna netikslu
+    GLCD.SelectFont(Iain5x7);
+    c_w = (int)(GLCD.StringWidth(desimtainis) + GLCD.StringWidth(" km"))/2;
+    GLCD.CursorToXY(64-c_w, 57);
+    GLCD.print(desimtainis);
+    GLCD.print(" km");
+  //vidurine dalis end
+
+  //desine dalis begin - srove ir temperatura
+    //piesiame trapecija sroves grafiniam atvaizdavimui
+      int graph_top = 11;
+      GLCD.DrawHLine(current_graph_x_begin[0], graph_top, current_graph_x_end[0]-current_graph_x_begin[0]+1, PIXEL_ON);
+      int graph_current = graph_height-((int)(graph_height/150.0*battery_current));
+      for(int temp_i=0; temp_i<graph_height; temp_i++) {
+        if(temp_i >= graph_current)
+          GLCD.DrawHLine(current_graph_x_begin[temp_i]+1, graph_top+temp_i+1, current_graph_x_end[temp_i]-current_graph_x_begin[temp_i]-1, PIXEL_ON);
+        else
+          GLCD.DrawHLine(current_graph_x_begin[temp_i]+1, graph_top+temp_i+1, current_graph_x_end[temp_i]-current_graph_x_begin[temp_i]-1, PIXEL_OFF);
+        GLCD.SetDot(current_graph_x_begin[temp_i], graph_top+temp_i+1, PIXEL_ON); 
+        
+        GLCD.SetDot(current_graph_x_end[temp_i], graph_top+temp_i+1, PIXEL_ON); 
+      }
+
+      GLCD.DrawHLine(current_graph_x_begin[graph_height-1], graph_top+graph_height+1, current_graph_x_end[graph_height-1]-current_graph_x_begin[graph_height-1]+1, PIXEL_ON);
+      //turime 41 eil. Piesime daug eiluciu tam tikro ilgio. Nusipiesime pries tai remelius. Pagal reiksme apskaiciuosime, ar reikia eilute daryti ON ar OFF.
+
+    //Variklio temperatura virsuje
+    dtostrf(temp_onboard/10, 3, 0, desimtainis);
+    GLCD.SelectFont(Iain5x7);
+    c_w = (int)GLCD.StringWidth(desimtainis)/2;
+    GLCD.CursorToXY(109-c_w, 3);
+    GLCD.print(desimtainis);
+    GLCD.SelectFont(Wendy3x5);
+    GLCD.CursorToXY(120, 5);
+    GLCD.print("c");
+
+    //naudojama srove begin apacioje po grafiku
+    if(battery_current > 100 || battery_current <= -100)
+      dtostrf(battery_current, 3, 0, desimtainis); //kada nereikia tokio detalaus tikslumo
+    else
+      dtostrf(battery_current, 5, 1, desimtainis);
+    GLCD.SelectFont(Iain5x7);
+    c_w = (int)GLCD.StringWidth(desimtainis)/2;
+    GLCD.CursorToXY(109-c_w, 55);
+    GLCD.print(desimtainis);
+    GLCD.SelectFont(Wendy3x5);
+    GLCD.CursorToXY(124, 57);
+    GLCD.print("A");
+    
+  //desine dalis end
+}
+
+char* GetMessageBlock() {
+  return "12:32";
+}
+
+void CalculateIterationData() {
+  unsigned int iteration_delay_ms = millis() - bms_retrieve_time;
+  trip_km += speed / 3600.0 / 1000.0 * iteration_delay_ms; //gauname kiek nuvaziavo kilometru tarp sekundziu
+  trip_w += battery_voltage * battery_current / 3600.0 / 1000.0 * iteration_delay_ms;
+  trip_w_km = trip_w / trip_km;
+  Serial.print("trip_km-");Serial.print(trip_km,3);
+  Serial.print(", trip_w-");Serial.print(trip_w,3);
+  Serial.print(", trip_w_km-");Serial.println(trip_w_km,3);
+  trip_max_w = trip_w > trip_max_w ? trip_w : trip_max_w;
+  trip_max_a = battery_current > trip_max_a ? battery_current : trip_max_a;
+  trip_min_v = battery_voltage < trip_min_v ? battery_voltage : trip_min_v;
+}
+
+void GetBmsData() {
+  if(bms_retrieve_time + bms_retrieve_interval < millis()) {
+    CalculateIterationData();
+    
+    /*fake duomenys begin*/
+    cell[0] = 38120; //celes 1-16, minV, maxV, deltaV
+    cell[1] = 38250;
+    cell[2] = 39250;
+    cell[3] = 40000;
+    cell[4] = 39000;
+    cell[5] = 36555;
+    cell[6] = 38990;
+    cell[7] = 38150;
+    cell[8] = 38650;
+    cell[9] = 39250;
+    cell[10] = 41000;
+    cell[11] = 38250;
+    cell[12] = 38250;
+    cell[13] = 38250;
+    cell[14] = 38250;
+    cell[15] = 38250;
+    cell[16] = 36555;
+    cell[17] = 41000;
+    cell[18] = cell[17]-cell[16];
+
+    battery_voltage = 61.25658585;
+    battery_current = 35.25;
+    speed = 30;
+    
+    uptime = millis()/1000;
+    time_left = 15760;
+    soc = 70000000;
+    distance_left = 42;
+    temp_onboard = 233;
+    temp_ext_1 = 250;
+    temp_ext_2 = 350;
+    battery_status = 151;
+    /*fake duomenys end*/
+    Serial.println("GetBmsData fired");
+    bms_retrieve_time = millis();
+  }
+}
+
+void LoadSettings() {
+  active_screen = 3;
+  trip_min_v = 150;
+  uint8 settings_exists = EEPROM.read(100);
+  if(settings_exists == 1) {
+    //radome uzsaugotus nustatymus, uzkraukime juos
+  }
+  else {
+    //nustatymu nera, bus "default" reiksmes
+  }
+}
+
+void SaveSettings() {
+  EEPROM.write(100, 1);
+}
+
+void ReadButton() {
+  /* 
+   * jeigu paspaustas mygtukas, darysime atitinkamai: 
+   * 1) short click - keiciame ekrana arba nustatymuose keiciame reiksme
+   * 2) long click - ijungiame arba isjungiame nustatymo keitima
+   */
+   //GLCD.ClearScreen(); //jeigu paspaudimas aktyvavosi gerai, tuomet nepamirskime isvalyti ekrano
+}
+
+void loop()
+{ 
+  GetBmsData();
+  ReadButton();
+  DrawScreen();
+  //GLCD.ClearScreen();
+
+  GLCD.CursorToXY(0, 0);//GLCD.CenterX-width, GLCD.CenterY-height);
+
+
+//  GLCD.print(millis()/1000);
+}
+
+//char* GetCharFromFloat(float num, int sk, int des)

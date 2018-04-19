@@ -1,0 +1,54 @@
+Sketch uses 53 296 bytes (81%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 408 bytes of dynamic memory.
+
+//pridejau laiko nustatyma pagal settings
+Sketch uses 53 712 bytes (81%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 408 bytes of dynamic memory.
+
+//iskeliau info bloku piesima i init funkcija
+Sketch uses 53 968 bytes (82%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 416 bytes of dynamic memory.
+
+//patvarkiau last screen - grizta i ankstesni puslapi
+Sketch uses 53 840 bytes (82%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 416 bytes of dynamic memory.
+
+pridejau PWM sviesumo reguliavima
+Sketch uses 53 968 bytes (82%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 416 bytes of dynamic memory.
+
+pridetas grizimas i pagrindini ekrana palaikius BACK
+Sketch uses 54 064 bytes (82%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 416 bytes of dynamic memory.
+
+ijungiame MODBUS biblioteka
+Sketch uses 54 632 bytes (83%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 984 bytes of dynamic memory.
+
+isjungiau kelis nereikalingus Serial.println
+Sketch uses 54 600 bytes (83%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 984 bytes of dynamic memory.
+
+pridejau antra info puslapi ir antrastes pirmam ir antrajam
+Sketch uses 54 816 bytes (83%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 984 bytes of dynamic memory.
+
+Pirmam info puslapiui nurodomi teisingi kintamieji
+Sketch uses 55 352 bytes (84%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 5 992 bytes of dynamic memory.
+
+//pirmas puslapis baigtas, papildomai skaiciuoja vidutini greiti bei judejimo laika (kai greitis didesnis nei 2kmh)
+Sketch uses 55 448 bytes (84%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 6 000 bytes of dynamic memory.
+
+//supildyta antro puslapio informacija, prideti regeneracijos kintamieji, tobulintas puslapiu numeravimas
+Sketch uses 55 280 bytes (84%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 6 016 bytes of dynamic memory.
+
+//pakoreguoti mygtukai ir padarytas nustatymu uzkrovimas-saugojimas
+Sketch uses 55 792 bytes (85%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 6 016 bytes of dynamic memory.
+
+//duomenu paemimas is BMS papildytas visais kintamaisiais
+Sketch uses 57 080 bytes (87%) of program storage space. Maximum is 65 536 bytes.
+Global variables use 6 016 bytes of dynamic memory.
