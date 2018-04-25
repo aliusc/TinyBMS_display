@@ -27,7 +27,7 @@ unsigned long setting[settings_count];
 
 //touch kintamieji
 byte touchedKeyVal;
-byte touchDelay = 100;
+byte touchDelay = 200;
 unsigned long button1PressBegin, button2PressBegin, button3PressBegin, button4PressBegin;
 boolean button1Pressed, button2Pressed, button3Pressed, button4Pressed;
 

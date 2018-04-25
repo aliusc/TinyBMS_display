@@ -20,9 +20,9 @@ RTC_DS3231 rtc;
 #define bms_retrieve_interval 100 //bus 100-200 intervale
 #define controller_retrieve_interval 1000 //bus turbut 1000
 #define screen_refresh_interval 2000 
-//#define button1Pin PA11
-//#define button2Pin PA12
-//#define button3Pin PA15
+#define button1Pin PA11
+#define button2Pin PA12
+#define button3Pin PA15
 #define button4Pin PB3
 #define backlight_pin PA8
 
@@ -30,14 +30,15 @@ void setup()
 {
   Serial.begin(9600);
   Serial.println("Programa pradeda darba");//delay(5000);
+  afio_cfg_debug_ports(AFIO_DEBUG_SW_ONLY); //isjunkime debug JTAG ant PA15, nenaudosime ir USB, nes per serial, tad lieka laisvi PA11, PA12
   GLCD.Init();
   rtc.begin();
-//  pinMode(button1Pin, INPUT_PULLUP);
-//  pinMode(button2Pin, INPUT_PULLUP);
-//  pinMode(button3Pin, INPUT_PULLUP);
+  pinMode(button1Pin, INPUT_PULLUP);
+  pinMode(button2Pin, INPUT_PULLUP);
+  pinMode(button3Pin, INPUT_PULLUP);
   pinMode(button4Pin, INPUT_PULLUP);
   #ifndef mock_data
-    bms.begin(170, STM32_USART1, 115200);
+    bms.begin(170, STM32_USART1, 115200); //Serial
   //  controller.begin(15, Serial3, 115200);
     bms.setResponseTimeout(10000);
   //  controller.setResponseTimeout(200);
@@ -668,12 +669,18 @@ void GetBmsData() {
     unsigned long temp_bms; //laikinas kintamasis reikalingas vercians i float
     
     //celiu itampa
+    Serial.println("Skaitome celiu itampa - pirmas rodmuo");
     result = bms.readHoldingRegisters(0, 16);
     if (result == bms.ku8MBSuccess) {
       for (int j = 0; j < 16; j++) {
         cell[j] = bms.getResponseBuffer(j);
+        Serial.print(j);
+        Serial.print("-");
+        Serial.print(cell[j]);
+        Serial.print(", ");
       }
     }
+    Serial.println("Celes perskaitytos - judame toliau");
 
     //BMS uptime; estimated time left; battery voltage; battery current; min, max celes, skirtumas; t1, t2; dist left; 
     result = bms.readHoldingRegisters(32, 13);
@@ -818,34 +825,35 @@ void SetSingleSetting(int index, int val) {
 void ReadTouchButtons() {
   touchedKeyVal = 0;
   
-//  if(digitalRead(button1Pin) == LOW) {
-//    button1Pressed = true;
-//    button1PressBegin = button1Pressed ? button1PressBegin : millis();
-//  }
-//  else {
-//    button1Pressed = false;
-//  }
-//  
-//  if(digitalRead(button2Pin) == LOW) {
-//    button2Pressed = true;
-//    button2PressBegin = button2Pressed ? button2PressBegin : millis();
-//  }
-//  else {
-//    button2Pressed = false;
-//  }
-//  
-//  if(digitalRead(button3Pin) == LOW) {
-//    button3Pressed = true;
-//    button3PressBegin = button3Pressed ? button3PressBegin : millis();
-//  }
-//  else {
-//    button3Pressed = false;
-//  }
+  if(digitalRead(button1Pin) == LOW) {
+    button1Pressed = true;
+    button1PressBegin = button1Pressed ? button1PressBegin : millis();
+  }
+  else {
+    button1Pressed = false;
+  }
+  
+  if(digitalRead(button2Pin) == LOW) {
+    button2Pressed = true;
+    button2PressBegin = button2Pressed ? button2PressBegin : millis();
+  }
+  else {
+    button2Pressed = false;
+  }
+  
+  if(digitalRead(button3Pin) == LOW) {
+    button3Pressed = true;
+    button3PressBegin = button3Pressed ? button3PressBegin : millis();
+  }
+  else {
+    button3Pressed = false;
+  }
     Serial.print("Button4 level is ");
-    if(digitalRead(button4Pin) == HIGH)
+    //if(digitalRead(button4Pin) == HIGH)
       Serial.println("HIGHT");
-    else
+    //else
       Serial.println("LOW");
+      
   if(digitalRead(button4Pin) == LOW) {
     button4PressBegin = button4Pressed ? button4PressBegin : millis();
     button4Pressed = true;
@@ -854,17 +862,17 @@ void ReadTouchButtons() {
     button4Pressed = false;
   }
   
-//  if(button1Pressed && button1PressBegin - millis() > touchDelay) { //click
-//    touchedKeyVal = 1;
-//  }
-//  if(button2Pressed && button2PressBegin - millis() > touchDelay) { //click
-//    touchedKeyVal = 2;
-//  }
-//  if(button3Pressed && button3PressBegin - millis() > touchDelay) { //click
-//    touchedKeyVal = 3;
-//  }
+  if(button1Pressed && button1PressBegin - millis() > touchDelay) { //click
+    touchedKeyVal = 1;
+  }
+  if(button2Pressed && button2PressBegin - millis() > touchDelay) { //click
+    touchedKeyVal = 2;
+  }
+  if(button3Pressed && button3PressBegin - millis() > touchDelay) { //click
+    touchedKeyVal = 3;
+  }
   if(button4Pressed && button4PressBegin - millis() > touchDelay) { //click
-//    touchedKeyVal = 3;
+    touchedKeyVal = 4;
   }
 
   if(touchedKeyVal > 0) {
@@ -927,6 +935,6 @@ void loop()
 
 //  GLCD.print(millis()/1000);
 //Serial.println(millis()/1000);
-delay(20);
+//delay(20);
 }
 
