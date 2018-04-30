@@ -879,16 +879,16 @@ void ReadTouchButtons() {
     button4Pressed = false;
   }
   
-  if(button1Pressed && button1PressBegin - millis() > touchDelay) { //click
+  if(button1Pressed && button1PressBegin - millis() > touchDelay) { //click BACK
     touchedKeyVal = 1;
   }
-  if(button2Pressed && button2PressBegin - millis() > touchDelay) { //click
+  if(button2Pressed && button2PressBegin - millis() > touchDelay) { //click LEFT
     touchedKeyVal = 2;
   }
-  if(button3Pressed && button3PressBegin - millis() > touchDelay) { //click
+  if(button3Pressed && button3PressBegin - millis() > touchDelay) { //click RIGHT
     touchedKeyVal = 3;
   }
-  if(button4Pressed && button4PressBegin - millis() > touchDelay) { //click
+  if(button4Pressed && button4PressBegin - millis() > touchDelay) { //click ENTER
     touchedKeyVal = 4;
   }
 
