@@ -2,7 +2,7 @@
  * Pirmas etapas:
  * užklausinėkime BMS naujausių duomenų, bei tai atvaizduokime.
  */
-#define mock_data 1 //uzkomentuokim jeigu prijungtas BMS. Jeigu dirba be BMS - ims duomenis is Mock
+//#define mock_data 1 //uzkomentuokim jeigu prijungtas BMS. Jeigu dirba be BMS - ims duomenis is Mock
 
 #include <openGLCD.h>
 #include <EEPROM.h>
@@ -28,8 +28,8 @@ RTC_DS3231 rtc;
 
 void setup()
 {
-  Serial.begin(9600);
-  Serial.println("Programa pradeda darba");//delay(5000);
+  //Serial.begin(9600);
+  //Serial.println("Programa pradeda darba");//delay(5000);
   afio_cfg_debug_ports(AFIO_DEBUG_SW_ONLY); //isjunkime debug JTAG ant PA15, nenaudosime ir USB, nes per serial, tad lieka laisvi PA11, PA12
   GLCD.Init();
   rtc.begin();
@@ -38,18 +38,21 @@ void setup()
   pinMode(button3Pin, INPUT_PULLUP);
   pinMode(button4Pin, INPUT_PULLUP);
   #ifndef mock_data
-    bms.begin(170, STM32_USART1, 115200); //Serial
+    bms.begin(170, STM32_USART0, 115200); //Serial
+    bms_link_active = true;
   //  controller.begin(15, Serial3, 115200);
-    bms.setResponseTimeout(10000);
+    bms.setResponseTimeout(200);
   //  controller.setResponseTimeout(200);
+  #else
+    bms_link_active = false;
   #endif
 
   //GLCD.SelectFont(lato_60);//lcdnums_60);
   LoadSettings();
-  Serial.println("Nustatymai uzkrauti");
+  //Serial.println("Nustatymai uzkrauti");
   pinMode(backlight_pin, PWM);
   pwmWrite(backlight_pin, map(setting[0], 0, 100, 0, 65530));
-  Serial.println("Einame i loop");
+  //Serial.println("Einame i loop");
 }
 
 void DrawScreen() {
@@ -57,13 +60,13 @@ void DrawScreen() {
     GLCD.ClearScreen();
 //    screen_refresh_time = millis(); //nezinia ar gera mintis refreshint ekrana nei is sio nei is to, nes negrazu
     if(go_next_screen) {
-      Serial.println("Perjungiamas ekranas");
+      //Serial.println("Perjungiamas ekranas");
       active_screen++;
       go_next_screen = false;
       active_settings_block = 0;
     }
     else if(go_last_screen) {
-      Serial.println("Perjungiamas ankstesnis ekranas");
+      //Serial.println("Perjungiamas ankstesnis ekranas");
       if(active_screen>0)
         active_screen--;
       else
@@ -72,7 +75,7 @@ void DrawScreen() {
       active_settings_block = 0;
     }
     else if(go_home_screen) {
-      Serial.println("Perjungiamas pradinis ekranas");
+      //Serial.println("Perjungiamas pradinis ekranas");
       active_screen = 0;
       go_home_screen = false;
       active_settings_block = 0;
@@ -81,8 +84,8 @@ void DrawScreen() {
     //papildomi veiksmai kurie turi buti atliekami tik 1 karta uzkraunant ta puslapi
     InitScreen();
   }
-  Serial.print("Active screen - ");
-  Serial.println(active_screen);
+  //Serial.print("Active screen - ");
+  //Serial.println(active_screen);
   switch(active_screen) {
     case 0:
       DrawIndexPage();
@@ -166,7 +169,7 @@ void DrawBatPage() {
   
   GLCD.SelectFont(Wendy3x5);
   for(int c=0;c<16;c++) {
-    GLCD.DrawVBarGraph( 24 + 5*c, 49, 3, -40, 0, cell_min-200, cell_max+200, cell[c]);
+    GLCD.DrawVBarGraph( 24 + 5*c, 49, 3, -40, 0, cell_min-100, cell_max+100, cell[c]);
     if(c%2==0) {
       if(c<9)
         GLCD.CursorToXY(24 + 5*c, 51);
@@ -421,14 +424,14 @@ void DrawInfoBlock(int row, int col, char* title) {
 void DrawIndexPage() {
   //piesime pagrindini langa
 
-//  Serial.println("DrawIndexPage. Round #1");
+//  //Serial.println("DrawIndexPage. Round #1");
   //baterija begin
-//    Serial.println("DrawIndexPage. Round #1.1");  
+//    //Serial.println("DrawIndexPage. Round #1.1");  
     //baterijos grafinis simbolis
     GLCD.DrawVBarGraph( 9, 52, 7, -41, 1, 0, 100, (int)soc/1000000);
     GLCD.DrawHLine( 11, 11, 3, PIXEL_ON);
 
-//    Serial.println("DrawIndexPage. Round #1.2");
+//    //Serial.println("DrawIndexPage. Round #1.2");
     //itampa
     GLCD.SelectFont(System5x7);
     dtostrf(battery_voltage, 2, 0, desimtainis);
@@ -442,7 +445,7 @@ void DrawIndexPage() {
     GLCD.CursorToXY(20, 4);
     GLCD.print("v");
 
-//    Serial.println("DrawIndexPage. Round #1.3");
+//    //Serial.println("DrawIndexPage. Round #1.3");
     //galimas kilometrazas
     dtostrf(battery_voltage, 3, 0, desimtainis);
     GLCD.SelectFont(Iain5x7);
@@ -456,14 +459,14 @@ void DrawIndexPage() {
 
   //vidurine dalis begin - laikrodis, greitis, trip_km
     //zinuciu-laikrodzio atvaizdavimas
-//    Serial.println("DrawIndexPage. Round #1.4");
+//    //Serial.println("DrawIndexPage. Round #1.4");
     char* clock_text = GetMessageBlock();
     GLCD.SelectFont(System5x7);
     c_w = (int)(GLCD.StringWidth(clock_text)/2);
     GLCD.CursorToXY(64-c_w, 2);
     GLCD.print(clock_text);
 
-//    Serial.println("DrawIndexPage. Round #1.5");
+//    //Serial.println("DrawIndexPage. Round #1.5");
     //greicio atvaizdavimas
     dtostrf(speed, 2, 0, desimtainis);
     GLCD.SelectFont(lato_50);
@@ -474,7 +477,7 @@ void DrawIndexPage() {
 //    GLCD.CursorToXY(19, 57);
 //    GLCD.print("km");
 
-//    Serial.println("DrawIndexPage. Round #1.6");
+//    //Serial.println("DrawIndexPage. Round #1.6");
     //TRIP atstumo atvaizdavimas
     dtostrf((int)(trip_km*10)/10.0, 5, 1, desimtainis); //palikime tik viena skaiciu po kablelio, nes kitaip apvalina ir buna netikslu
     GLCD.SelectFont(Iain5x7);
@@ -484,7 +487,7 @@ void DrawIndexPage() {
     GLCD.print(" km");
   //vidurine dalis end
 
-//Serial.println("DrawIndexPage. Round #2");
+////Serial.println("DrawIndexPage. Round #2");
   //desine dalis begin - srove ir temperatura
     //piesiame trapecija sroves grafiniam atvaizdavimui
       int graph_top = 11;
@@ -534,8 +537,14 @@ char* GetMessageBlock() {
   // naudojame egzistuojanti tinkamo tipo kintamaji (desimtainis), nes char* yra rodykle, ir isejus is funkcijos tai, kur ji rodo isnyksta
   if(dabar.second()%2)
     sprintf(desimtainis,"%d:%02d",dabar.hour(), dabar.minute());
-  else
-    sprintf(desimtainis,"%d %02d",dabar.hour(), dabar.minute());
+  else {
+    if(!bms_link_active) {
+      return "NoLink";
+    }
+    else {
+      sprintf(desimtainis," %d %02d ",dabar.hour(), dabar.minute());
+    }
+  }
   return desimtainis;
 }
 
@@ -577,10 +586,13 @@ void CalculateIterationData() {
     regen_ah += battery_current / 3600.0 / 1000.0 * iteration_delay_ms;
     regen_max_a = battery_current < regen_max_a ? battery_current : regen_max_a;
   }
+  if(abs(battery_current) > 1) {
+    current_0_begin_time = millis();
+  }
   trip_w_km = trip_w / trip_km;
-//  Serial.print("trip_km-");Serial.print(trip_km,3);
-//  Serial.print(", trip_w-");Serial.print(trip_w,3);
-//  Serial.print(", trip_w_km-");Serial.println(trip_w_km,3);
+//  //Serial.print("trip_km-");//Serial.print(trip_km,3);
+//  //Serial.print(", trip_w-");//Serial.print(trip_w,3);
+//  //Serial.print(", trip_w_km-");//Serial.println(trip_w_km,3);
   trip_max_w = battery_voltage * battery_current > trip_max_w ? battery_voltage * battery_current : trip_max_w;
   trip_max_a = battery_current > trip_max_a ? battery_current : trip_max_a;
   trip_min_v = battery_voltage < trip_min_v || trip_min_v == 0 ? battery_voltage : trip_min_v;
@@ -625,7 +637,7 @@ void GetBmsData() {
     CalculateIterationData();
     #ifdef mock_data
     /*fake duomenys begin*/
-    Serial.println("read fake BMS data");
+    //Serial.println("read fake BMS data");
     cell[0] = 38120; //celes 1-16, minV, maxV, deltaV
     cell[1] = 38250;
     cell[2] = 39250;
@@ -659,80 +671,83 @@ void GetBmsData() {
     temp_ext_2 = 350;
     battery_status = 151;
     motor_temp = 29;
-    Serial.println("read fake BMS data END");
+    //Serial.println("read fake BMS data END");
     /*fake duomenys end*/
 
     #else
 //tikri duomenys imami is BMS
-
-    uint8_t result; //rezultato kintamasis
-    unsigned long temp_bms; //laikinas kintamasis reikalingas vercians i float
-    
-    //celiu itampa
-    Serial.println("Skaitome celiu itampa - pirmas rodmuo");
-    result = bms.readHoldingRegisters(0, 16);
-    if (result == bms.ku8MBSuccess) {
-      for (int j = 0; j < 16; j++) {
-        cell[j] = bms.getResponseBuffer(j);
-        Serial.print(j);
-        Serial.print("-");
-        Serial.print(cell[j]);
-        Serial.print(", ");
+    if(bms_link_active) {
+      uint8_t result; //rezultato kintamasis
+      unsigned long temp_bms; //laikinas kintamasis reikalingas vercians i float
+      
+      //celiu itampa
+      //Serial.println("Skaitome celiu itampa - pirmas rodmuo");
+      result = bms.readHoldingRegisters(0, 16);
+      if (result == bms.ku8MBSuccess) {
+        for (int j = 0; j < 16; j++) {
+          cell[j] = bms.getResponseBuffer(j);
+          //Serial.print(j);
+          //Serial.print("-");
+          //Serial.print(cell[j]);
+          //Serial.print(", ");
+        }
       }
-    }
-    Serial.println("Celes perskaitytos - judame toliau");
-
-    //BMS uptime; estimated time left; battery voltage; battery current; min, max celes, skirtumas; t1, t2; dist left; 
-    result = bms.readHoldingRegisters(32, 13);
-    if (result == bms.ku8MBSuccess) {
-      uptime = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0);
-      time_left = (unsigned long)bms.getResponseBuffer(3) << 16 | bms.getResponseBuffer(2);
-      temp_bms = (unsigned long)bms.getResponseBuffer(5) << 16 | bms.getResponseBuffer(4);
-      battery_voltage = *(float*)&temp_bms; 
-      temp_bms = (unsigned long)bms.getResponseBuffer(7) << 16 | bms.getResponseBuffer(6);
-      battery_current = *(float*)&temp_bms * -1.0;
-      cell[16] = bms.getResponseBuffer(8)*10;
-      cell[17] = bms.getResponseBuffer(9)*10;
-      cell[18] = cell[17]-cell[16];
-      temp_ext_1 = bms.getResponseBuffer(10) < 150 ? bms.getResponseBuffer(10) : 0;
-      temp_ext_2 = bms.getResponseBuffer(11) < 150 ? bms.getResponseBuffer(11) : 0;
-      distance_left = bms.getResponseBuffer(12);
-    }
-
-    //SOC, onboard temperature (t0)
-    result = bms.readHoldingRegisters(46, 3);
-    if (result == bms.ku8MBSuccess) {
-      soc = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0);
-      temp_onboard = bms.getResponseBuffer(2);
-    }
-
-    //battery status
-    result = bms.readHoldingRegisters(50, 1);
-    if (result == bms.ku8MBSuccess) {
-      battery_status = bms.getResponseBuffer(0);
-    }
-
-    //speed
-    result = bms.readHoldingRegisters(54, 2);
-    if (result == bms.ku8MBSuccess) {
-      temp_bms = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0);
-      speed = *(float*)&temp_bms; 
+      //Serial.println("Celes perskaitytos - judame toliau");
+  
+      //BMS uptime; estimated time left; battery voltage; battery current; min, max celes, skirtumas; t1, t2; dist left; 
+      result = bms.readHoldingRegisters(32, 13);
+      if (result == bms.ku8MBSuccess) {
+        uptime = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0);
+        time_left = (unsigned long)bms.getResponseBuffer(3) << 16 | bms.getResponseBuffer(2);
+        temp_bms = (unsigned long)bms.getResponseBuffer(5) << 16 | bms.getResponseBuffer(4);
+        battery_voltage = *(float*)&temp_bms; 
+        temp_bms = (unsigned long)bms.getResponseBuffer(7) << 16 | bms.getResponseBuffer(6);
+        battery_current = *(float*)&temp_bms * -1.0;
+        cell[16] = bms.getResponseBuffer(8)*10;
+        cell[17] = bms.getResponseBuffer(9)*10;
+        cell[18] = cell[17]-cell[16];
+        temp_ext_1 = bms.getResponseBuffer(10) < 150 ? bms.getResponseBuffer(10) : 0;
+        temp_ext_2 = bms.getResponseBuffer(11) < 150 ? bms.getResponseBuffer(11) : 0;
+        distance_left = bms.getResponseBuffer(12);
+      }
+  
+      //SOC, onboard temperature (t0)
+      result = bms.readHoldingRegisters(46, 3);
+      if (result == bms.ku8MBSuccess) {
+        soc = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0);
+        temp_onboard = bms.getResponseBuffer(2);
+      }
+  
+      //battery status
+      result = bms.readHoldingRegisters(50, 1);
+      if (result == bms.ku8MBSuccess) {
+        battery_status = bms.getResponseBuffer(0);
+      }
+  
+      //speed
+      result = bms.readHoldingRegisters(54, 2);
+      if (result == bms.ku8MBSuccess) {
+        temp_bms = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0);
+        speed = *(float*)&temp_bms; 
+      }
     }
     #endif
 
-//    Serial.println("GetBmsData fired");
+//    //Serial.println("GetBmsData fired");
     bms_retrieve_time = millis();
   }
-  Serial.println("BMS data calculations done");
+  //Serial.println("BMS data calculations done");
 }
 
 void GetHallImpusesPerDistanceBmsValue() {
   uint8_t result;
 
   #ifndef mock_data
-  result = bms.readHoldingRegisters(312, 2);
-  if (result == bms.ku8MBSuccess) {
-    hall_impuses_per_distance = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0); 
+  if(bms_link_active) {
+    result = bms.readHoldingRegisters(312, 2);
+    if (result == bms.ku8MBSuccess) {
+      hall_impuses_per_distance = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0); 
+    }
   }
   #else
     hall_impuses_per_distance = 0;
@@ -770,38 +785,40 @@ void SaveSettings() {
   EEPROM.write(101+1, setting[1]); //saugome nustatyma
   EEPROM.write(101+2, setting[2]); //saugome nustatyma
   EEPROM.write(101+4, setting[4]); //saugome nustatyma
-  Serial.println("Settings saved");
+  //Serial.println("Settings saved");
 
 #ifndef mock_data
+  if(bms_link_active) {
 //upload hall setting to BMS
       // set word 0 of TX buffer to least-significant word of counter (bits 15..0)
       int result;
 //      result=bms.writeSingleRegister(312, 1);//((val) & 0xFFFF));
-  //    Serial.println(result, DEC);
+  //    //Serial.println(result, DEC);
       // set word 1 of TX buffer to most-significant word of counter (bits 31..16)
   //    result=bms.writeSingleRegister(313, 1);//(((val) >> 16) & 0xFFFF));
-  //    Serial.println(result, DEC);
-  //    Serial.println("hall saugojimas baigtas");
+  //    //Serial.println(result, DEC);
+  //    //Serial.println("hall saugojimas baigtas");
       bms.clearTransmitBuffer();
       result = bms.setTransmitBuffer(0, lowWord(setting[3]));
-      Serial.print("buferis 0 - ");
-      Serial.println(result, DEC);
+      //Serial.print("buferis 0 - ");
+      //Serial.println(result, DEC);
       bms.setTransmitBuffer(1, highWord(setting[3])); 
-      Serial.print("buferis 1 - ");
-      Serial.println(result, DEC);
+      //Serial.print("buferis 1 - ");
+      //Serial.println(result, DEC);
       // slave: write TX buffer to (2) 16-bit registers starting at register 0
 //      result = bms.writeMultipleRegisters(312, 2);
-//      Serial.println(setting[3]);
+//      //Serial.println(setting[3]);
   //    result = bms.writeMultipleRegisters(312, val);
 //    result = bms.maskWriteRegister(312, 0, 150);
-      Serial.println(result, DEC);
+      //Serial.println(result, DEC);
   //    result = bms.maskWriteRegister(313, 1, 0);
-  //    Serial.println(result, DEC);
-      Serial.println("hall saugojimas baigtas");
+  //    //Serial.println(result, DEC);
+      //Serial.println("hall saugojimas baigtas");
     
   //nustatome controleriui uzstatyta greiti
 //  controller.writeSingleRegister(1, setting[1]);
 //  controller.writeSingleRegister(2, setting[2]);
+  }
 #endif
 }
 
@@ -848,11 +865,11 @@ void ReadTouchButtons() {
   else {
     button3Pressed = false;
   }
-    Serial.print("Button4 level is ");
+    //Serial.print("Button4 level is ");
     //if(digitalRead(button4Pin) == HIGH)
-      Serial.println("HIGHT");
+      //Serial.println("HIGHT");
     //else
-      Serial.println("LOW");
+      //Serial.println("LOW");
       
   if(digitalRead(button4Pin) == LOW) {
     button4PressBegin = button4Pressed ? button4PressBegin : millis();
@@ -876,9 +893,10 @@ void ReadTouchButtons() {
   }
 
   if(touchedKeyVal > 0) {
-      Serial.print("button #");
-      Serial.print(touchedKeyVal);  
-      Serial.println(" Down");
+    buttonAnyPressBegin = millis();
+      //Serial.print("button #");
+      //Serial.print(touchedKeyVal);  
+      //Serial.println(" Down");
       switch(touchedKeyVal) {
         case 1:
           if(active_settings_block == 0) {
@@ -912,6 +930,19 @@ void ReadTouchButtons() {
   
 }
 
+void CheckShouldDisconnectUart() {
+  //testuojame UART atsijungima
+  /*
+   * Atsijungia kai:
+   * 1 - mygtukai nespaudomi bent 1 minute ir
+   * 2 - baterijos busena yra Sleep/Idle/Fault ir srove mazesne uz 1 A bent 1 minute
+   */
+  if(millis() - buttonAnyPressBegin > 60000 && ((battery_status == 149 || battery_status == 151 || battery_status == 155) && millis() - current_0_begin_time > 60000)) {
+    bms_link_active = false;
+    bms.end(STM32_USART0);
+  }
+}
+
 char* getHumanTime(unsigned long val){  
 //  int days = elapsedDays(val);
   int hours = numberOfHours(val);
@@ -929,12 +960,13 @@ void loop()
   DrawScreen();
   
   ReadTouchButtons();
-
+  CheckShouldDisconnectUart();
+  
 //  GLCD.CursorToXY(0, 0);//GLCD.CenterX-width, GLCD.CenterY-height);
 
 
 //  GLCD.print(millis()/1000);
-//Serial.println(millis()/1000);
+////Serial.println(millis()/1000);
 //delay(20);
 }
 

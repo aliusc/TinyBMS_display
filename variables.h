@@ -4,6 +4,7 @@ float battery_voltage, battery_current, speed;
 unsigned long uptime, time_left, soc, hall_impuses_per_distance;
 unsigned int distance_left;
 int temp_onboard, temp_ext_1, temp_ext_2, motor_temp, battery_status, motor_temp_max;
+boolean bms_link_active;
 byte speed_mode; //is greicio kontrolerio o ne is BMS
 
 // apskaiciuojami kintamieji
@@ -30,10 +31,12 @@ byte touchedKeyVal;
 byte touchDelay = 200;
 unsigned long button1PressBegin, button2PressBegin, button3PressBegin, button4PressBegin;
 boolean button1Pressed, button2Pressed, button3Pressed, button4Pressed;
+unsigned long buttonAnyPressBegin = millis();
 
 
 // pagalbiniai kintamieji
 unsigned long bms_retrieve_time, controller_retrieve_time, screen_refresh_time, motor_graph_time;
+unsigned long current_0_begin_time = millis();
 volatile unsigned long button_down_begin;
 bool go_next_screen, go_last_screen, go_home_screen, increase_value, decrease_value;
 int button_short_click = 20;
