@@ -1,7 +1,7 @@
 // is BMS gaunami duomenys
 unsigned int cell[19]; //celes 1-16, minV, maxV, deltaV
 float battery_voltage, battery_current, speed;
-unsigned long uptime, time_left, soc, hall_impuses_per_distance;
+unsigned long uptime, time_left, soc;
 unsigned int distance_left;
 int temp_onboard, temp_ext_1, temp_ext_2, motor_temp, battery_status, motor_temp_max;
 boolean bms_link_active;
@@ -27,11 +27,13 @@ int temperatur_graph[117];// = {60.2,50,40.8,30.1,25.4,24.7,25,25.3,25.6,25.9,26
 unsigned long setting[settings_count];
 
 //touch kintamieji
-byte touchedKeyVal;
-byte touchDelay = 200;
-unsigned long button1PressBegin, button2PressBegin, button3PressBegin, button4PressBegin;
-boolean button1Pressed, button2Pressed, button3Pressed, button4Pressed;
+byte pressedKey, touchedKeyVal, lastTouchedKeyVal;
+byte touchDelay = 30;
+int touchLongDelay = 1200;
+unsigned long buttonPressBegin;
+boolean buttonPressed, buttonFired, buttonPressedLong;
 unsigned long buttonAnyPressBegin = millis();
+byte buttonPins[5] = {0, PA11, PA12, PA15, PB3};
 
 
 // pagalbiniai kintamieji

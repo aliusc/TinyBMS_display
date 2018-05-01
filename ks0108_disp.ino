@@ -20,10 +20,6 @@ RTC_DS3231 rtc;
 #define bms_retrieve_interval 100 //bus 100-200 intervale
 #define controller_retrieve_interval 1000 //bus turbut 1000
 #define screen_refresh_interval 2000 
-#define button1Pin PA11
-#define button2Pin PA12
-#define button3Pin PA15
-#define button4Pin PB3
 #define backlight_pin PA8
 
 void setup()
@@ -33,10 +29,9 @@ void setup()
   afio_cfg_debug_ports(AFIO_DEBUG_SW_ONLY); //isjunkime debug JTAG ant PA15, nenaudosime ir USB, nes per serial, tad lieka laisvi PA11, PA12
   GLCD.Init();
   rtc.begin();
-  pinMode(button1Pin, INPUT_PULLUP);
-  pinMode(button2Pin, INPUT_PULLUP);
-  pinMode(button3Pin, INPUT_PULLUP);
-  pinMode(button4Pin, INPUT_PULLUP);
+  for(c_w = 1; c_w < 5; c_w++) {
+    pinMode(buttonPins[c_w], INPUT_PULLUP);
+  }
   #ifndef mock_data
     bms.begin(170, STM32_USART0, 115200); //Serial
     bms_link_active = true;
@@ -140,8 +135,7 @@ void InitScreen() {
       cell_max = cell[17];
       break;
     case 5:
-      GetHallImpusesPerDistanceBmsValue();
-      setting[3] = hall_impuses_per_distance;
+      setting[3] = GetHallImpusesPerDistanceBmsValue();
       
       DateTime dabar = rtc.now();
       setting[5] = dabar.hour();
@@ -327,7 +321,7 @@ void DrawSettingsPage() {
   
   GLCD.CursorToXY(0, 38);
   GLCD.print("Hall impulses dist");
-  DrawSettingEntry(92, 38, 26, active_settings_block==6, 3, 0, 4000);
+  DrawSettingEntry(92, 38, 26, active_settings_block==6, 3, 0, 40000);
 //  GLCD.print("Temp for home");
 //  GLCD.print("Temp for graph");
   
@@ -739,18 +733,18 @@ void GetBmsData() {
   //Serial.println("BMS data calculations done");
 }
 
-void GetHallImpusesPerDistanceBmsValue() {
+unsigned long GetHallImpusesPerDistanceBmsValue() {
   uint8_t result;
 
   #ifndef mock_data
   if(bms_link_active) {
     result = bms.readHoldingRegisters(312, 2);
     if (result == bms.ku8MBSuccess) {
-      hall_impuses_per_distance = (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0); 
+      return (unsigned long)bms.getResponseBuffer(1) << 16 | bms.getResponseBuffer(0); 
     }
   }
   #else
-    hall_impuses_per_distance = 0;
+    return 0;
   #endif
 }
 
@@ -790,30 +784,12 @@ void SaveSettings() {
 #ifndef mock_data
   if(bms_link_active) {
 //upload hall setting to BMS
-      // set word 0 of TX buffer to least-significant word of counter (bits 15..0)
       int result;
 //      result=bms.writeSingleRegister(312, 1);//((val) & 0xFFFF));
-  //    //Serial.println(result, DEC);
-      // set word 1 of TX buffer to most-significant word of counter (bits 31..16)
-  //    result=bms.writeSingleRegister(313, 1);//(((val) >> 16) & 0xFFFF));
-  //    //Serial.println(result, DEC);
-  //    //Serial.println("hall saugojimas baigtas");
       bms.clearTransmitBuffer();
-      result = bms.setTransmitBuffer(0, lowWord(setting[3]));
-      //Serial.print("buferis 0 - ");
-      //Serial.println(result, DEC);
+      bms.setTransmitBuffer(0, lowWord(setting[3]));
       bms.setTransmitBuffer(1, highWord(setting[3])); 
-      //Serial.print("buferis 1 - ");
-      //Serial.println(result, DEC);
-      // slave: write TX buffer to (2) 16-bit registers starting at register 0
-//      result = bms.writeMultipleRegisters(312, 2);
-//      //Serial.println(setting[3]);
-  //    result = bms.writeMultipleRegisters(312, val);
-//    result = bms.maskWriteRegister(312, 0, 150);
-      //Serial.println(result, DEC);
-  //    result = bms.maskWriteRegister(313, 1, 0);
-  //    //Serial.println(result, DEC);
-      //Serial.println("hall saugojimas baigtas");
+      result = bms.writeMultipleRegisters(312, 2);
     
   //nustatome controleriui uzstatyta greiti
 //  controller.writeSingleRegister(1, setting[1]);
@@ -830,66 +806,51 @@ void SetSingleSetting(int index, int val) {
     rtc.adjust(DateTime(dabar.year(), dabar.month(), dabar.day(), setting[5], setting[6], 0));
   }
   else if(index == 3) {
-    
+    //hall reiksme saugosime tik iseidami
   }
   else {
-    if(index == 0)
+    if(index == 0) {
+      //ekrano ryskuma rodykime iskart
       pwmWrite(backlight_pin, map(val, 0, 100, 0, 65530));
+    }
   }
 }
 
 
 void ReadTouchButtons() {
   touchedKeyVal = 0;
-  
-  if(digitalRead(button1Pin) == LOW) {
-    button1Pressed = true;
-    button1PressBegin = button1Pressed ? button1PressBegin : millis();
+  pressedKey = 0;
+
+  if(lastTouchedKeyVal>0 && digitalRead(buttonPins[lastTouchedKeyVal]) == HIGH) {
+    buttonPressed = false;
   }
-  else {
-    button1Pressed = false;
+
+  for(c_w = 1; c_w < 5; c_w++) {
+    if(digitalRead(buttonPins[c_w]) == LOW) {
+      buttonPressBegin = buttonPressed ? buttonPressBegin : millis();
+      buttonPressed = true;
+      pressedKey = c_w;
+      if(pressedKey != lastTouchedKeyVal) {
+        buttonPressedLong = false;
+        lastTouchedKeyVal = pressedKey;
+        buttonFired = false;
+      }
+      break;
+    }
   }
-  
-  if(digitalRead(button2Pin) == LOW) {
-    button2Pressed = true;
-    button2PressBegin = button2Pressed ? button2PressBegin : millis();
+  if(!buttonPressed) {
+    buttonPressedLong = false;
+    buttonFired = false;
   }
-  else {
-    button2Pressed = false;
-  }
-  
-  if(digitalRead(button3Pin) == LOW) {
-    button3Pressed = true;
-    button3PressBegin = button3Pressed ? button3PressBegin : millis();
-  }
-  else {
-    button3Pressed = false;
-  }
-    //Serial.print("Button4 level is ");
-    //if(digitalRead(button4Pin) == HIGH)
-      //Serial.println("HIGHT");
-    //else
-      //Serial.println("LOW");
-      
-  if(digitalRead(button4Pin) == LOW) {
-    button4PressBegin = button4Pressed ? button4PressBegin : millis();
-    button4Pressed = true;
-  }
-  else {
-    button4Pressed = false;
-  }
-  
-  if(button1Pressed && button1PressBegin - millis() > touchDelay) { //click BACK
-    touchedKeyVal = 1;
-  }
-  if(button2Pressed && button2PressBegin - millis() > touchDelay) { //click LEFT
-    touchedKeyVal = 2;
-  }
-  if(button3Pressed && button3PressBegin - millis() > touchDelay) { //click RIGHT
-    touchedKeyVal = 3;
-  }
-  if(button4Pressed && button4PressBegin - millis() > touchDelay) { //click ENTER
-    touchedKeyVal = 4;
+  /*
+   * 1 - click BACK
+   * 2 - click LEFT
+   * 3 - click RIGHT
+   * 4 - click ENTER
+   */
+  buttonPressedLong = buttonPressed && millis() - buttonPressBegin > touchLongDelay;
+  if(buttonPressed && millis() - buttonPressBegin > touchDelay && (!buttonFired || buttonPressedLong)) { //click arba long click
+    touchedKeyVal = pressedKey;
   }
 
   if(touchedKeyVal > 0) {
@@ -926,6 +887,7 @@ void ReadTouchButtons() {
             active_settings_block = 1;
           break;
       }
+      buttonFired = true;
   }   
   
 }
